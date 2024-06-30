@@ -16,7 +16,7 @@ from train import Trainer, get_dataloader_keyword
 if __name__ == "__main__":
     def options():
         parser = argparse.ArgumentParser(description="Input optional guidance for training")
-        parser.add_argument("--epoch", default=1, type=int, help="The number of training epoch")
+        parser.add_argument("--epoch", default=30, type=int, help="The number of training epoch")
         parser.add_argument("--lr", default=0.01, type=float, help="Learning rate")
         parser.add_argument("--batch", default=256, type=int, help="Training batch size")
         parser.add_argument("--step", default=30, type=int, help="Training step size")
