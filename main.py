@@ -21,7 +21,7 @@ if __name__ == "__main__":
         parser.add_argument("--batch", default=256, type=int, help="Training batch size")
         parser.add_argument("--step", default=30, type=int, help="Training step size")
         parser.add_argument("--gpu", default=1, type=int, help="Number of GPU device")
-        parser.add_argument("--root", default="/content/TorchKWS/dataset", type=str, help="The path of dataset")
+        parser.add_argument("--root", default="/content/KWS/dataset", type=str, help="The path of dataset")
         parser.add_argument("--dataset", default="gsc_v2", help="The name of the data set")
         parser.add_argument("--model", default="convmixer", type=str, help="models")
         parser.add_argument("--freq", default=30, type=int, help="Model saving frequency (in step)")
@@ -46,7 +46,7 @@ if __name__ == "__main__":
     Logger 
     """
     save_path = f"{parameters.dataset}/{parameters.model}_lr{parameters.lr}_epoch{parameters.epoch}"
-    logging.config.fileConfig("/content/TorchKWS/logging.conf")
+    logging.config.fileConfig("/content/KWS/logging.conf")
     logger = logging.getLogger()
     os.makedirs(f"logs/{parameters.dataset}", exist_ok=True)
     fileHandler = logging.FileHandler("logs/{}.log".format(save_path), mode="w")
