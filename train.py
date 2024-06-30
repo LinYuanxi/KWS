@@ -72,7 +72,7 @@ class Trainer:
             print(f">>>   Available GPU device: {self.device_list}")
             self.model = nn.DataParallel(self.model)
         self.best_acc = 0.0
-        self.best_model = None
+        self.best_model = model
         self.criterion = nn.CrossEntropyLoss()
         self.loss_name = {
             "train_loss": 0.0, "train_accuracy": 0.0, "train_total": 0, "train_correct": 0,

@@ -16,14 +16,14 @@ from train import Trainer, get_dataloader_keyword
 if __name__ == "__main__":
     def options():
         parser = argparse.ArgumentParser(description="Input optional guidance for training")
-        parser.add_argument("--epoch", default=10, type=int, help="The number of training epoch")
+        parser.add_argument("--epoch", default=1, type=int, help="The number of training epoch")
         parser.add_argument("--lr", default=0.01, type=float, help="Learning rate")
         parser.add_argument("--batch", default=256, type=int, help="Training batch size")
         parser.add_argument("--step", default=30, type=int, help="Training step size")
         parser.add_argument("--gpu", default=1, type=int, help="Number of GPU device")
-        parser.add_argument("--root", default="./dataset", type=str, help="The path of dataset")
+        parser.add_argument("--root", default="/content/TorchKWS/dataset", type=str, help="The path of dataset")
         parser.add_argument("--dataset", default="gsc_v2", help="The name of the data set")
-        parser.add_argument("--model", default="bcresnet8", type=str, help="models")
+        parser.add_argument("--model", default="convmixer", type=str, help="models")
         parser.add_argument("--freq", default=30, type=int, help="Model saving frequency (in step)")
         parser.add_argument("--save", default="weight", type=str, help="The save name")
         parser.add_argument("--opt", default="adam", type=str, help="The optimizer")
@@ -46,7 +46,7 @@ if __name__ == "__main__":
     Logger 
     """
     save_path = f"{parameters.dataset}/{parameters.model}_lr{parameters.lr}_epoch{parameters.epoch}"
-    logging.config.fileConfig("./logging.conf")
+    logging.config.fileConfig("/content/TorchKWS/logging.conf")
     logger = logging.getLogger()
     os.makedirs(f"logs/{parameters.dataset}", exist_ok=True)
     fileHandler = logging.FileHandler("logs/{}.log".format(save_path), mode="w")
