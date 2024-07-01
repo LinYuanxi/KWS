@@ -266,21 +266,25 @@ class KWSConvMixer(nn.Module):
         self.preConvMixer = PreConvBlock(self.temporal_dim, feat_dim,
                                          kernel_size=7, padding=3,
                                          dropout=dropout)
+        
+        #self.se_block = SELayer(feat_dim, reduction=4, attend_dim="chan")
 
+                     
         self.convMixer1 = ConvMixerBlock(self.temporal_dim, feat_dim,
                                          temporal_kernel_size=9, temporal_padding=4,
                                          freq_domain_kernel_size=5, freq_domain_padding=2,
                                          num_freq_filters=64, 
                                          dropout=dropout)
        
-        self.se_block = SELayer(feat_dim, reduction=4, attend_dim="chan")
                      
         self.convMixer2 = ConvMixerBlock(self.temporal_dim, feat_dim,
                                          temporal_kernel_size=11, temporal_padding=5,
                                          freq_domain_kernel_size=5, freq_domain_padding=2,
                                          num_freq_filters=32, 
                                          dropout=dropout)
-            
+
+        #self.se_block = SELayer(feat_dim, reduction=4, attend_dim="chan")
+                     
         self.convMixer3 = ConvMixerBlock(self.temporal_dim, feat_dim,
                                          temporal_kernel_size=13, temporal_padding=6,
                                          freq_domain_kernel_size=7, freq_domain_padding=3,
@@ -293,6 +297,9 @@ class KWSConvMixer(nn.Module):
                                          num_freq_filters=8, 
                                          dropout=dropout)
         
+        #self.se_block = SELayer(feat_dim, reduction=4, attend_dim="chan")
+
+                     
         self.conv2 = nn.Sequential(
             SeparableConv1d(feat_dim, feat_dim*2, 
                             kernel_size=17, stride=1, padding=8, bias=False),
