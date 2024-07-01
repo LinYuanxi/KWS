@@ -11,6 +11,58 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math 
 
+# SE Layer definition
+class SELayer(nn.Module):
+    def __init__(self, dim, reduction=16, attend_dim="chan"):
+        super(SELayer, self).__init__()
+        self.attend_dim = attend_dim
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        hid_dim = dim // reduction
+
+        if hid_dim < 4:
+            hid_dim = 4
+
+        if attend_dim == "chan-freq":
+            self.fc = nn.Sequential(
+                nn.Conv2d(1, 8, 3, stride=1, padding=1, bias=False),
+                nn.ReLU(inplace=True),
+                nn.Conv2d(8, 1, 3, stride=1, padding=1, bias=False),
+                nn.Sigmoid()
+            )
+        else:
+            self.fc = nn.Sequential(
+                nn.Linear(dim, hid_dim, bias=False),
+                nn.ReLU(inplace=True),
+                nn.Linear(hid_dim, dim, bias=False),
+                nn.Sigmoid()
+            )
+
+    def forward(self, x):
+        b, c, t, f = x.size()
+        if self.attend_dim == "chan":
+            y = self.avg_pool(x).view(b, c)
+            y = self.fc(y).view(b, c, 1, 1)
+        elif self.attend_dim == "chan_timewise":
+            y = torch.mean(x, dim=3).transpose(1, 2)
+            y = self.fc(y).transpose(1, 2).view(b, c, t, 1)
+        elif self.attend_dim == "freq":
+            y = torch.mean(x, dim=(1, 2))
+            y = self.fc(y).view(b, 1, 1, f)
+        elif self.attend_dim == "time":
+            y = torch.mean(x, dim=(1, 3))
+            y = self.fc(y).view(b, 1, t, 1)
+        elif self.attend_dim == "freq_timewise":
+            y = torch.mean(x, dim=1)
+            y = self.fc(y).view(b, 1, t, f)
+        elif self.attend_dim == "time_freqwise":
+            y = torch.mean(x, dim=3)
+            y = self.fc(y).view(b, t, 1, f)
+        elif self.attend_dim == "chan-freq":
+            y = torch.mean(x, dim=2).view(b, 1, c, f)
+            y = self.fc(y).view(b, c, 1, f)
+
+        return x * y.expand_as(x)
+
 ## activation layer
 class Swish(nn.Module):
     """Swish is a smooth, non-monotonic function that 
@@ -220,7 +272,9 @@ class KWSConvMixer(nn.Module):
                                          freq_domain_kernel_size=5, freq_domain_padding=2,
                                          num_freq_filters=64, 
                                          dropout=dropout)
-        
+       
+        self.se_block = SELayer(feat_dim, reduction=4, attend_dim="chan")
+                     
         self.convMixer2 = ConvMixerBlock(self.temporal_dim, feat_dim,
                                          temporal_kernel_size=11, temporal_padding=5,
                                          freq_domain_kernel_size=5, freq_domain_padding=2,
@@ -266,6 +320,7 @@ class KWSConvMixer(nn.Module):
         x = self.conv1(x)
         x = self.preConvMixer(x)
         x = self.convMixer1(x)
+        x = self.se_block(x)  # Adding SE block between convMixer1 and convMixer2
         x = self.convMixer2(x) 
         x = self.convMixer3(x) 
         x = self.convMixer4(x) 
