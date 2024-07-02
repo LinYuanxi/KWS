@@ -327,8 +327,10 @@ class KWSConvMixer(nn.Module):
         x = self.conv1(x)
         x = self.preConvMixer(x)
         x = self.convMixer1(x)
-        x = self.se_block(x)  # Adding SE block between convMixer1 and convMixer2
         x = self.convMixer2(x) 
+        x = x.unsqueeze(-1)  # Add a new dimension at the end
+        x = self.se_block(x)  # Adding SE block between convMixer1 and convMixer2
+        x = x.squeeze(-1)  # Remove the added dimension
         x = self.convMixer3(x) 
         x = self.convMixer4(x) 
 
