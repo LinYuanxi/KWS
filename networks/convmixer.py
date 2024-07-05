@@ -55,8 +55,8 @@ class SELayer(nn.Module):
             y = torch.mean(x, dim=1)
             y = self.fc(y).view(b, 1, t, f)
         elif self.attend_dim == "time_freqwise":
-            y = torch.mean(x, dim=3)
-            y = self.fc(y).view(b, t, 1, f)
+            y = torch.mean(x, dim=3).transpose(1, 2)
+            y = self.fc(y).transpose(1, 2).view(b, c, t, 1)  # 改正这里的维度操作
         elif self.attend_dim == "chan-freq":
             y = torch.mean(x, dim=2).view(b, 1, c, f)
             y = self.fc(y).view(b, c, 1, f)
