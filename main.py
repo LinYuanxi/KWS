@@ -19,7 +19,7 @@ if __name__ == "__main__":
         parser.add_argument("--epoch", default=30, type=int, help="The number of training epoch")
         parser.add_argument("--lr", default=0.01, type=float, help="Learning rate")
         parser.add_argument("--batch", default=256, type=int, help="Training batch size")
-        parser.add_argument("--step", default=30, type=int, help="Training step size")
+        parser.add_argument("--step", default=20, type=int, help="Training step size")
         parser.add_argument("--gpu", default=1, type=int, help="Number of GPU device")
         parser.add_argument("--root", default="/content/KWS/dataset", type=str, help="The path of dataset")
         parser.add_argument("--dataset", default="gsc_v2", help="The name of the data set")
