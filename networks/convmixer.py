@@ -267,8 +267,8 @@ class KWSConvMixer(nn.Module):
                                          kernel_size=7, padding=3,
                                          dropout=dropout)
         
-        #self.se_block = SELayer(feat_dim, reduction=4, attend_dim="chan")
-
+        #self.se_block1 = SELayer(feat_dim, reduction=4, attend_dim="chan")
+        #self.se_block2 = SELayer(feat_dim, reduction=4, attend_dim="time_freqwise")
                      
         self.convMixer1 = ConvMixerBlock(self.temporal_dim, feat_dim,
                                          temporal_kernel_size=9, temporal_padding=4,
@@ -326,11 +326,15 @@ class KWSConvMixer(nn.Module):
         x = x.squeeze(1)
         x = self.conv1(x)
         x = self.preConvMixer(x)
+
+        x = x.unsqueeze(-1)  # Add a new dimension at the end
+        x = self.se_block1(x)  # Adding SE block between convMixer1 and convMixer2
+        x = self.se_block2(x)  # Adding SE block between convMixer1 and convMixer2
+        x = x.squeeze(-1)  # Remove the added dimension
+        
         x = self.convMixer1(x)
         x = self.convMixer2(x) 
-        x = x.unsqueeze(-1)  # Add a new dimension at the end
-        x = self.se_block(x)  # Adding SE block between convMixer1 and convMixer2
-        x = x.squeeze(-1)  # Remove the added dimension
+
         x = self.convMixer3(x) 
         x = self.convMixer4(x) 
 
