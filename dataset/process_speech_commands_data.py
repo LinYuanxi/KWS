@@ -200,7 +200,9 @@ def __process_data(
 
 
     for stage in range(5):  # 五个阶段的课程学习
-        for entry in all_files:
+        logging.info(f"Starting stage {stage + 1} of 5")
+        num_files = len(all_files)
+        for idx, entry in enumerate(all_files):
             r = re.match(pattern, entry)
             if r:
                 label, uid = r.group(2), r.group(3)
@@ -228,6 +230,11 @@ def __process_data(
                         test.append(sample)
                     else:
                         train.append(sample)
+            if (idx + 1) % 100 == 0 or (idx + 1) == num_files:
+                logging.info(f"Processed {idx + 1}/{num_files} files in stage {stage + 1}")
+        logging.info(f"Completed stage {stage + 1} of 5")
+
+    logging.info("Processing data completed with noise augmentation.")
 
 
 
@@ -395,15 +402,6 @@ def main():
     parser.set_defaults(log=False, rebalance=False, skip_duration=False)
     args = parser.parse_args()
 
-    logging.info(f"Processing {data_set}")
-    __process_data(
-        data_folder,
-        data_folder,
-        rebalance=args.rebalance,
-        class_split=args.class_split,
-        skip_duration=args.skip_duration,
-    )
-    
     if args.log:
         logging.basicConfig(level=logging.DEBUG)
 
