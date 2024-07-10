@@ -19,7 +19,6 @@ import urllib.request
 import soundfile as sf
 import librosa
 import numpy as np
-from audiomentations import Compose, AddBackgroundNoise
 
 
 
@@ -70,9 +69,6 @@ def safe_members(tar):
         # Implement any specific checks here, e.g., sanitize paths, check for directory traversal
         yield member
 
-augment = Compose([
-    AddBackgroundNoise(sounds_path="/path/to/musan", min_snr_in_db=0, max_snr_in_db=10, p=1.0)
-])
 
 
 def __process_data(
@@ -197,46 +193,6 @@ def __process_data(
                     sf.write(out_file_path, y_slice, sr)
 
                     silence_files.append(('silence', out_file_path))
-
-
-    for stage in range(5):  # 五个阶段的课程学习
-        logging.info(f"Starting stage {stage + 1} of 5")
-        num_files = len(all_files)
-        for idx, entry in enumerate(all_files):
-            r = re.match(pattern, entry)
-            if r:
-                label, uid = r.group(2), r.group(3)
-                if label == '_background_noise_' or label == 'silence':
-                    continue
-                data, sr = librosa.load(entry, sr=16000)
-                augmented_data = augment(samples=data, sample_rate=sr)
-                output_file = os.path.join(dst_folder, f"noisy_stage{stage}_{os.path.basename(entry)}")
-                sf.write(output_file, augmented_data, sr)
-                sample = (label, output_file)
-                if uid not in valset and uid not in testset:
-                    if label in label_count:
-                        label_count[label] += 1
-                    else:
-                        label_count[label] = 1
-                    if label in label_filepaths:
-                        label_filepaths[label] += [sample]
-                    else:
-                        label_filepaths[label] = [sample]
-                    if label == 'unknown':
-                        continue
-                    if uid in valset:
-                        val.append(sample)
-                    elif uid in testset:
-                        test.append(sample)
-                    else:
-                        train.append(sample)
-            if (idx + 1) % 100 == 0 or (idx + 1) == num_files:
-                logging.info(f"Processed {idx + 1}/{num_files} files in stage {stage + 1}")
-        logging.info(f"Completed stage {stage + 1} of 5")
-
-    logging.info("Processing data completed with noise augmentation.")
-
-
 
         
         rng = np.random.RandomState(0)
