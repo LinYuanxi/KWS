@@ -1,10 +1,9 @@
-"""
 # !/usr/bin/env python
--*- coding: utf-8 -*-
-@Time    : 2022/3/15 下午5:43
-@Author  : Yang "Jan" Xiao 
-@Description : utils
-"""
+# -*- coding: utf-8 -*-
+# @Time    : 2022/3/15 下午5:43
+# @Author  : Yang "Jan" Xiao 
+# @Description : utils
+
 import numpy as np
 import torch
 
@@ -61,3 +60,16 @@ def prepare_device(n_gpu_use):
     device = torch.device("cuda" if n_gpu_use > 0 else "cpu")
     list_ids = list(range(n_gpu_use))
     return device, list_ids
+
+def add_noise(data, noise_level):
+    noise = np.random.normal(0, 1, data.shape) * 10 ** (noise_level / 20.0)
+    return data + noise
+
+def augment_with_rir(data, augment):
+    data = augment(samples=data, sample_rate=16000)
+    return data
+
+def normalize(values):
+    min_val = np.min(values)
+    max_val = np.max(values)
+    return [(val - min_val) / (max_val - min_val) for val in values]
