@@ -99,17 +99,9 @@ class Trainer:
         rir, _ = torchaudio.load(self.rir_dataset[rir_index])
         rir = rir.to(data.device)  # 将RIR移动到与数据相同的设备
         rir = rir / torch.norm(rir, p=2)
-        data = torch.nn.functional.conv1d(data.unsqueeze(0), rir.unsqueeze(1)).squeeze(0)
-        return data
-
-    def augment_with_rir(self, data):
-        rir_index = torch.randint(0, len(self.rir_dataset), size=(1,)).item()
-        rir, _ = torchaudio.load(self.rir_dataset[rir_index])
-        rir = rir.to(data.device)  # 将RIR移动到与数据相同的设备
-        rir = rir / torch.norm(rir, p=2)
         if data.dim() == 2:  # 如果数据是2D的，则添加一个批次维度
             data = data.unsqueeze(0)
-        data = torch.nn.functional.conv1d(data, rir.unsqueeze(1))
+        data = torch.nn.functional.conv1d(data, rir.unsqueeze(1), padding=rir.shape[1] // 2)
         return data.squeeze(0)  # 移除批次维度
 
     def normalize(self, values):
@@ -228,3 +220,4 @@ class Trainer:
             f"| f1_score {self.loss_name['f1_score']:.4f}"
         )
         return self.loss_name
+
