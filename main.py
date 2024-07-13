@@ -1,10 +1,3 @@
-"""
-# !/usr/bin/env python
--*- coding: utf-8 -*-
-@Time    : 2022/3/15 下午6:07
-@Author  : Yang "Jan" Xiao 
-@Description : main
-"""
 import os
 import logging.config
 import time
@@ -28,23 +21,21 @@ if __name__ == "__main__":
         parser.add_argument("--save", default="weight", type=str, help="The save name")
         parser.add_argument("--opt", default="adam", type=str, help="The optimizer")
         parser.add_argument("--sche", default="cos", type=str, help="The scheduler")
+        parser.add_argument("--noise_aug", action='store_true', help="Whether to apply noise augmentation")
+        parser.add_argument("--rir_aug", action='store_true', help="Whether to apply RIR augmentation")
+        parser.add_argument("--musan_path", default="/content/KWS/dataset/musan", type=str, help="Path to MUSAN noise dataset")
+        parser.add_argument("--rir_path", default="/content/KWS/dataset/RIRS_NOISES", type=str, help="Path to RIR dataset")
+        parser.add_argument("--noise_levels", default="[0, -5, -10]", type=str, help="List of noise levels for curriculum learning")
+        parser.add_argument("--patience", default=1, type=int, help="Patience for curriculum learning")
         args = parser.parse_args()
         return args
 
-
     parameters = options()
 
-    """
-    Data 
-    """
     if parameters.dataset == "gsc_v1" or parameters.dataset == "gsc_v2":
         class_list = ["yes", "no", "up", "down", "left", "right", "on", "off", "stop", "go", "unknown", "silence"]
         class_encoding = {category: index for index, category in enumerate(class_list)}
 
-
-    """
-    Logger 
-    """
     save_path = f"{parameters.dataset}/{parameters.model}_lr{parameters.lr}_epoch{parameters.epoch}"
     logging.config.fileConfig("/content/KWS/logging.conf")
     logger = logging.getLogger()
@@ -56,30 +47,20 @@ if __name__ == "__main__":
     fileHandler.setFormatter(formatter)
     logger.addHandler(fileHandler)
     logger.info(f"[1] Select a KWS dataset ({parameters.dataset})")
-    """
-    Model 
-    """
     model = select_model(parameters.model, len(class_list))
     logger.info(f"[2] Select a KWS model ({parameters.model})")
     optimizer, scheduler = select_optimizer(parameters.opt, parameters.lr, model, parameters.sche)
-    """
-    Train 
-    """
     data_path = os.path.join(parameters.root, parameters.dataset)
     logger.info(f"[4] Load the KWS dataset from {data_path}")
-    train_loader, valid_loader, test_loader = get_dataloader_keyword(data_path, class_list,
-                                                       class_encoding, parameters)
+    train_loader, valid_loader, test_loader = get_dataloader_keyword(
+        data_path, class_list, class_encoding, parameters, noise_aug=parameters.noise_aug)
     start_time = time.time()
-    Trainer(parameters, model).model_train(optimizer=optimizer, scheduler=scheduler,
-                                                    train_dataloader=train_loader,
-                                                    valid_dataloader=valid_loader)
-    result = Trainer(parameters, model).model_test(test_dataloader=test_loader)
-    """
-    Summary
-    """
-    # Total time (T)
+    trainer = Trainer(parameters, model)
+    trainer.train_curriculum(optimizer=optimizer, scheduler=scheduler,
+                             train_dataloader=train_loader,
+                             valid_dataloader=valid_loader)
+    result = trainer.model_test(test_loader)
     duration = time.time() - start_time
     logger.info(f"======== Summary =======")
     logger.info(f"{parameters.model} parameters: {parameter_number(model)}")
     logger.info(f"Total time {duration}, Avg: {duration / parameters.epoch}s")
-
