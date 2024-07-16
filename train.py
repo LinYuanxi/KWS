@@ -18,9 +18,9 @@ def get_dataloader_keyword(data_path, class_list, class_encoding, parameters, no
     valid_json = f"{data_path}/validation_manifest.json"
     test_json = f"{data_path}/test_manifest.json"
     
-    train_dataset = SpeechCommandDataset(data_path, train_json, True, class_list, class_encoding, noise_aug=noise_aug, musan_path=parameters.musan_path, rir_path=parameters.rir_path)
-    valid_dataset = SpeechCommandDataset(data_path, valid_json, False, class_list, class_encoding, musan_path=parameters.musan_path, rir_path=parameters.rir_path)
-    test_dataset = SpeechCommandDataset(data_path, test_json, False, class_list, class_encoding, musan_path=parameters.musan_path, rir_path=parameters.rir_path)
+    train_dataset = SpeechCommandDataset(data_path, train_json, True, class_list, class_encoding, noise_aug=noise_aug, musan_path=parameters.musan_path)
+    valid_dataset = SpeechCommandDataset(data_path, valid_json, False, class_list, class_encoding, musan_path=parameters.musan_path)
+    test_dataset = SpeechCommandDataset(data_path, test_json, False, class_list, class_encoding, musan_path=parameters.musan_path)
     
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
     valid_dataloader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False, drop_last=True)
@@ -50,7 +50,6 @@ class Trainer:
         
         # 初始化 musan_noise_dataset 和 rir_dataset
         self.musan_noise_dataset = self.load_noise_dataset(opt.musan_path)
-        self.rir_dataset = self.load_rir_dataset(opt.rir_path)
         
     def load_noise_dataset(self, musan_path):
         noise_dataset = []
@@ -60,15 +59,6 @@ class Trainer:
                     noise_dataset.append(os.path.join(root, fn))
         logger.info(f"Loaded {len(noise_dataset)} noise files from {musan_path}")
         return noise_dataset
-
-    def load_rir_dataset(self, rir_path):
-        rir_dataset = []
-        for root, _, filenames in os.walk(rir_path):
-            for fn in filenames:
-                if fn.endswith('.wav'):
-                    rir_dataset.append(os.path.join(root, fn))
-        logger.info(f"Loaded {len(rir_dataset)} RIR files from {rir_path}")
-        return rir_dataset
 
     def model_save(self):
         save_directory = os.path.join("./model_save", self.opt.save)
@@ -95,16 +85,6 @@ class Trainer:
             noise = noise.narrow(1, offset, data.shape[1])
         noise = noise * 10 ** (noise_level / 20.0)
         return data + noise
-
-    def augment_with_rir(self, data):
-        rir_index = torch.randint(0, len(self.rir_dataset), size=(1,)).item()
-        rir, _ = torchaudio.load(self.rir_dataset[rir_index])
-        rir = rir.to(data.device)  # 将RIR移动到与数据相同的设备
-        rir = rir / torch.norm(rir, p=2)
-        if data.dim() == 2:  # 如果数据是2D的，则添加一个批次维度
-            data = data.unsqueeze(0)
-        data = torch.nn.functional.conv1d(data, rir.unsqueeze(1), padding=rir.shape[1] // 2)
-        return data.squeeze(0)  # 移除批次维度
 
     def normalize(self, values):
         min_val = np.min(values)
