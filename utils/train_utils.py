@@ -15,6 +15,35 @@ from networks.matchboxnet import MatchboxNet
 from networks.kwt import kwt_from_name
 from networks.convmixer import KWSConvMixer
 from torchaudio.transforms import MFCC
+import random
+def _spec_augmentation(x, num_time_mask=1, num_freq_mask=1, max_time=25, max_freq=25):
+    """perform spec augmentation 
+    Args:
+        x: input feature, T * F 2D
+        num_t_mask: number of time mask to apply
+        num_f_mask: number of freq mask to apply
+        max_t: max width of time mask
+        max_f: max width of freq mask
+    Returns:
+        augmented feature
+    """
+    max_freq_channel, max_frames = x.size()
+
+    # time mask
+    for i in range(num_time_mask):
+        start = random.randint(0, max_frames - 1)
+        length = random.randint(1, max_time)
+        end = min(max_frames, start + length)
+        x[:, start:end] = 0
+
+    # freq mask
+    for i in range(num_freq_mask):
+        start = random.randint(0, max_freq_channel - 1)
+        length = random.randint(1, max_freq)
+        end = min(max_freq_channel, start + length)
+        x[start:end, :] = 0
+
+    return x
 class MFCC_KWS_Model(nn.Module):
     def __init__(self, model) -> None:
         super(MFCC_KWS_Model,self).__init__()
