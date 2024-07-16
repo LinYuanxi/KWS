@@ -44,6 +44,7 @@ def _spec_augmentation(x, num_time_mask=1, num_freq_mask=1, max_time=25, max_fre
         x[start:end, :] = 0
 
     return x
+    
 class MFCC_KWS_Model(nn.Module):
     def __init__(self, model) -> None:
         super(MFCC_KWS_Model,self).__init__()
@@ -55,6 +56,8 @@ class MFCC_KWS_Model(nn.Module):
         self.model = model
     def forward(self, x):
         x = self.mfcc(x)
+        if self.training:
+            x = _spec_augmentation(x, num_time_mask=1, num_freq_mask=1, max_time=25, max_freq=25)
         x = self.model(x)
         return x
 
