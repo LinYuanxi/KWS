@@ -60,7 +60,6 @@ class SpeechCommandDataset(Dataset):
         self.rir_path = rir_path
         self.noise_dataset = self.load_noise_dataset()
         self.musan_noise_dataset = self.load_musan_noise_dataset()
-        self.rir_dataset = self.load_rir_dataset()
         self.speech_dataset = self.load_speech_dataset()
         self.noise_levels = [0, -5, -10]
 
