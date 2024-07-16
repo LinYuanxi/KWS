@@ -17,8 +17,9 @@ from networks.kwt import kwt_from_name
 from networks.convmixer import KWSConvMixer
 from torchaudio.transforms import MFCC
 import random
+from typing import Optional, Tuple
 
-def mixup(data, target=None, alpha=0.2, beta=0.2, mixup_label_type="soft"):
+def mixup(data: torch.Tensor, target: Optional[torch.Tensor] = None, alpha: float = 0.2, beta: float = 0.2, mixup_label_type: str = "soft") -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
     """Mixup data augmentation by permuting the data.
 
     Args:
@@ -38,6 +39,8 @@ def mixup(data, target=None, alpha=0.2, beta=0.2, mixup_label_type="soft"):
 
         mixed_data = c * data + (1 - c) * data[perm, :]
         if target is not None:
+            if target.dim() == 1:
+                target = target.unsqueeze(1)
             if mixup_label_type == "soft":
                 mixed_target = torch.clamp(
                     c * target + (1 - c) * target[perm, :], min=0, max=1
@@ -50,7 +53,7 @@ def mixup(data, target=None, alpha=0.2, beta=0.2, mixup_label_type="soft"):
                     f"{'soft', 'hard'}"
                 )
 
-            return mixed_data, mixed_target
+            return mixed_data, mixed_target.squeeze(1) if mixed_target.size(1) == 1 else mixed_target
         else:
             return mixed_data
     
@@ -67,7 +70,7 @@ def _spec_augmentation(x, num_time_mask=1, num_freq_mask=1, max_time=25, max_fre
     Returns:
         augmented feature
     """
-    max_freq_channel, max_frames = x.size()
+    max_freq_channel, max_frames = x.size()[-2], x.size()[-1]
 
     # time mask
     for i in range(num_time_mask):
@@ -96,12 +99,15 @@ class MFCC_KWS_Model(nn.Module):
         self.model = model
     def forward(self, x, label=None):
         x = self.mfcc(x)
+        batch_size, num_channels, num_mfcc, num_frames = x.shape
+        x = x.view(batch_size, num_mfcc, num_frames)  # 确保 x 是二维的
         if self.training:
             if 0.5 < np.random.rand():
                 x, label = mixup(x, label, alpha=0.2, beta=0.2, mixup_label_type="soft")
             x = _spec_augmentation(x, num_time_mask=1, num_freq_mask=1, max_time=25, max_freq=25)
         x = self.model(x)
-
+        if label is not None:
+            label = label.long()  # 确保标签是长整型
         return x if label is None else (x, label)
 
 
