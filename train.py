@@ -83,6 +83,8 @@ class Trainer:
             torch.save(self.model.state_dict(), os.path.join(save_directory, "last.pt"))
 
     def add_noise(self, data, noise_level):
+        if noise_level == 'clean':
+            return data
         noise_index = torch.randint(0, len(self.musan_noise_dataset), size=(1,)).item()
         noise, _ = torchaudio.load(self.musan_noise_dataset[noise_index])
         noise = noise.to(data.device)  # 将噪声移动到与数据相同的设备
@@ -113,14 +115,14 @@ class Trainer:
 
     def train_curriculum(self, optimizer, scheduler, train_dataloader, valid_dataloader):
         noise_levels = [
-            [],          # 干净样本
-            [0],         # 噪声级别 0
-            [0, -5],     # 噪声级别 0 和 -5
-            [0, -5, -10] # 噪声级别 0, -5, 和 -10
+            ['clean'],          # 干净样本
+            ['clean', 0],         # 噪声级别 0 和 干净样本
+            ['clean', 0, -5],     # 噪声级别 0 和 -5 和 干净样本    
+            ['clean', 0, -5, -10] # 噪声级别 0, -5, 和 -10 和 干净样本
         ]
         best_criterion = -float('inf')
         patience = self.opt.patience
-        stages = len(noise_levels) + 1 # 包括RIR阶段
+        stages = len(noise_levels) # 阶段数
         train_length, valid_length = len(train_dataloader), len(valid_dataloader)
 
         for stage in range(stages):
@@ -136,17 +138,15 @@ class Trainer:
                 self.model.train()
                 for batch_idx, (waveform, labels) in tqdm(enumerate(train_dataloader), position=0, total=len(train_dataloader)):
                     waveform, labels = waveform.to(self.device), labels.to(self.device)
-                    if stage < len(noise_levels):
-                        logger.info(f"Applying noise level(s) {noise_levels[stage]} at stage {stage+1}, epoch {self.epo+1}")  # 记录噪声增强信息
-                        for noise_level in noise_levels[stage]:
-                            waveform = self.add_noise(waveform, noise_level)
-                    else:
-                        if np.random.rand() > 0.5:
-                            logger.info(f"Applying RIR augmentation at stage {stage+1}, epoch {self.epo+1}")  # 记录RIR增强信息
-                            waveform = self.augment_with_rir(waveform)
+                    logger.info(f"Applying noise level(s) {noise_levels[stage]} at stage {stage}, epoch {self.epo+1}")  # 记录噪声增强信息
+                    # for noise_level in noise_levels[stage]:
+                    #     waveform = self.add_noise(waveform, noise_level)
+                    # Randomly select a noise level from the current stage's noise levels 随机选择当前阶段的噪声级别，而不是循环，保证均匀分布
+                    selected_noise_level = random.choice(noise_levels[stage])
+                    waveform = self.add_noise(waveform, selected_noise_level)
 
                     optimizer.zero_grad()
-                    logits = self.model(waveform)
+                    logits,labels = self.model(waveform, labels)
                     loss = self.criterion(logits, labels)
                     loss.backward()
                     optimizer.step()

@@ -11,6 +11,55 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math 
 
+
+class ECALayer(nn.Module):
+    def __init__(self, dim, k_size=3, reduction=16, attend_dim="chan"):
+        super(ECALayer, self).__init__()
+        self.attend_dim = attend_dim
+        self.k_size = k_size
+        self.reduction = reduction
+        hid_dim = max(dim // reduction, 4)  # Ensuring a minimum dimension size for stability
+
+        if hid_dim < 4:
+            hid_dim = 4
+
+        if attend_dim == "chan":
+            self.avg_pool = nn.AdaptiveAvgPool2d(1)
+            self.conv = nn.Conv1d(1, 1, kernel_size=k_size, padding=(k_size - 1) // 2, bias=False)
+            self.sigmoid = nn.Sigmoid()
+        elif attend_dim == "chan-freq":
+            # Example configuration for channel-frequency attention
+            self.avg_pool = nn.AdaptiveAvgPool2d(1)
+            self.conv = nn.Conv2d(1, 1, kernel_size=(k_size, k_size), padding=((k_size - 1) // 2, (k_size - 1) // 2), bias=False)
+            self.sigmoid = nn.Sigmoid()
+        
+
+    def forward(self, x):
+        b, c, t, f = x.size()
+
+        if self.attend_dim == "chan":
+            y = self.avg_pool(x)  # Global average pooling
+            y = self.conv(y.squeeze(-1).transpose(-1, -2)).transpose(-1, -2).unsqueeze(-1)
+            y = self.sigmoid(y)
+        elif self.attend_dim == "chan-freq":
+            # Assume some reshaping and pooling adapted for channel-frequency
+            y = self.avg_pool(x).view(b, 1, c, -1)  # Adjusted pooling
+            y = self.conv(y).view(b, c, 1, 1)
+            y = self.sigmoid(y)
+        
+        elif self.attend_dim == "chan_timewise":
+            y = torch.mean(x, dim=3).transpose(1, 2)  #x size : [bs, frames, chan]
+            y = self.fc(y).transpose(1, 2).view(b, c, t, 1)
+
+        elif self.attend_dim == "freq":
+            y = torch.mean(x, dim=(1, 2))
+            y = self.fc(y).view(b, 1, 1, f)
+
+        elif self.attend_dim == "freq_timewise":
+            y = torch.mean(x, dim=1)                  #x size : [bs, frames, freqs]
+            y = self.fc(y).view(b, 1, t, f)
+
+        return x * y.expand_as(x)    
 # SE Layer definition
 class SELayer(nn.Module):
     def __init__(self, dim, reduction=16, attend_dim="chan"):
