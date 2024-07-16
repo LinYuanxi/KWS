@@ -5,6 +5,7 @@
 @Author  : Yang "Jan" Xiao 
 @Description : train_utils
 """
+import numpy as np
 import torch
 import torch_optimizer
 from torch import optim
@@ -16,6 +17,45 @@ from networks.kwt import kwt_from_name
 from networks.convmixer import KWSConvMixer
 from torchaudio.transforms import MFCC
 import random
+
+def mixup(data, target=None, alpha=0.2, beta=0.2, mixup_label_type="soft"):
+    """Mixup data augmentation by permuting the data.
+
+    Args:
+        data: input tensor, must be a batch so data can be permuted and mixed.
+        target: tensor of the target to be mixed, if None, do not return targets.
+        alpha: float, the parameter to the np.random.beta distribution
+        beta: float, the parameter to the np.random.beta distribution
+        mixup_label_type: str, the type of mixup to be used choice between {'soft', 'hard'}.
+    Returns:
+        torch.Tensor of mixed data and labels if given
+    """
+    with torch.no_grad():
+        batch_size = data.size(0)
+        c = np.random.beta(alpha, beta)
+
+        perm = torch.randperm(batch_size)
+
+        mixed_data = c * data + (1 - c) * data[perm, :]
+        if target is not None:
+            if mixup_label_type == "soft":
+                mixed_target = torch.clamp(
+                    c * target + (1 - c) * target[perm, :], min=0, max=1
+                )
+            elif mixup_label_type == "hard":
+                mixed_target = torch.clamp(target + target[perm, :], min=0, max=1)
+            else:
+                raise NotImplementedError(
+                    f"mixup_label_type: {mixup_label_type} not implemented. choice in "
+                    f"{'soft', 'hard'}"
+                )
+
+            return mixed_data, mixed_target
+        else:
+            return mixed_data
+    
+
+
 def _spec_augmentation(x, num_time_mask=1, num_freq_mask=1, max_time=25, max_freq=25):
     """perform spec augmentation 
     Args:
@@ -54,12 +94,15 @@ class MFCC_KWS_Model(nn.Module):
             melkwargs={"n_fft": 400, "hop_length": 160, "n_mels": 64, "f_min": 20, "f_max": 8000},
         )
         self.model = model
-    def forward(self, x):
+    def forward(self, x, label=None):
         x = self.mfcc(x)
         if self.training:
+            if 0.5 < np.random.rand():
+                x, label = mixup(x, label, alpha=0.2, beta=0.2, mixup_label_type="soft")
             x = _spec_augmentation(x, num_time_mask=1, num_freq_mask=1, max_time=25, max_freq=25)
         x = self.model(x)
-        return x
+
+        return x if label is None else (x, label)
 
 
 def select_optimizer(opt_name, lr, model, sched_name="cos"):
