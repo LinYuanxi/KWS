@@ -64,13 +64,8 @@ class SpeechCommandDataset(Dataset):
         self.speech_dataset = self.load_speech_dataset()
         self.noise_levels = [0, -5, -10]
 
-        print(f"RIR path: {self.rir_path}")
-        rir_files = os.listdir(self.rir_path)
-        print(f"Found {len(rir_files)} RIR files")
-
         self.augment = Compose([
             AddMusanNoise(self.musan_noise_path, p=0.5),
-            ApplyImpulseResponse(ir_path=self.rir_path, p=0.5)
         ])
 
     def load_noise_dataset(self):
@@ -90,15 +85,6 @@ class SpeechCommandDataset(Dataset):
                 if ext == ".wav":
                     musan_dataset.append(os.path.join(root, fn))
         return musan_dataset
-
-    def load_rir_dataset(self):
-        rir_dataset = []
-        for root, _, filenames in sorted(os.walk(self.rir_path, followlinks=True)):
-            for fn in sorted(filenames):
-                name, ext = os.path.splitext(fn)
-                if ext == ".wav":
-                    rir_dataset.append(os.path.join(root, fn))
-        return rir_dataset
 
     def load_speech_dataset(self):
         with open(self.json_filename, 'r') as f:
@@ -177,12 +163,6 @@ class SpeechCommandDataset(Dataset):
         noise = noise * 10 ** (noise_level / 20.0)
         return data + noise
 
-    def augment_with_rir(self, data):
-        rir_index = torch.randint(0, len(self.rir_dataset), size=(1,)).item()
-        rir, _ = torchaudio.load(self.rir_dataset[rir_index])
-        rir = rir / torch.norm(rir, p=2)
-        data = torch.nn.functional.conv1d(data.unsqueeze(0), rir.unsqueeze(1)).squeeze(0)
-        return data
 
     def one_hot(self, speech_category):
         encoding = self.class_encoding[speech_category]
