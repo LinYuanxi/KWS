@@ -24,9 +24,8 @@ if __name__ == "__main__":
         parser.add_argument("--noise_aug", action='store_true', help="Whether to apply noise augmentation")
         parser.add_argument("--rir_aug", action='store_true', help="Whether to apply RIR augmentation")
         parser.add_argument("--musan_path", default="/content/KWS/dataset/musan", type=str, help="Path to MUSAN noise dataset")
-        parser.add_argument("--rir_path", default="/content/KWS/dataset/RIRS_NOISES", type=str, help="Path to RIR dataset")
         parser.add_argument("--noise_levels", default="[0, -5, -10]", type=str, help="List of noise levels for curriculum learning")
-        parser.add_argument("--patience", default=1, type=int, help="Patience for curriculum learning")
+        parser.add_argument("--patience", default=10, type=int, help="Patience for curriculum learning")
         args = parser.parse_args()
         return args
 
